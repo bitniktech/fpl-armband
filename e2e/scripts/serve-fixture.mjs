@@ -4,7 +4,7 @@
 // playwright.config.js's own comment on webServer for why this is deliberately not split into
 // a CI step that backgrounds the binary and a local script that does something else.
 import { spawn } from 'node:child_process';
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -31,10 +31,19 @@ async function main() {
   const files = await primeCache(captureDir, cacheDir);
   console.error(`[serve-fixture] primed ${files.length} file(s) from ${LIVE_CAPTURE}`);
 
+  // The server's clock is pinned to the moment the capture was taken. The capture's
+  // bootstrap never advances, so against the wall clock every gameweek in the planning
+  // horizon eventually reads as past its deadline, buildGameweeks drops them all for an
+  // unimported reader, and the page boots with no gameweek to plan.
+  const manifest = JSON.parse(await readFile(path.join(captureDir, 'manifest.json'), 'utf8'));
+  if (!manifest.captured_at) {
+    throw new Error(`${LIVE_CAPTURE}/manifest.json has no captured_at to pin the clock to`);
+  }
+
   const child = spawn(
     binary,
     ['-config', path.relative(repoRoot, configPath), '-cache-dir', path.relative(repoRoot, cacheDir),
-     'serve', '-addr', `127.0.0.1:${PORT}`],
+     'serve', '-addr', `127.0.0.1:${PORT}`, '-now', manifest.captured_at],
     {
       cwd: repoRoot,
       env: {

@@ -93,10 +93,16 @@ func cmdServe(ctx context.Context, cfg config.Config, cfgPath, teamPath string,
 	// four gameweeks rather than five, which is why State carries the horizon and the page
 	// is told rather than left to imply one.
 	horizon := fs.Int("horizon", 4, "gameweeks the preview scores over (0 uses the config's)")
+	nowFlag := fs.String("now", "", "serve the page as of this RFC3339 instant instead of the "+
+		"wall clock, for a frozen capture (unset uses the real clock)")
 	if err := fs.Parse(flag.Args()[1:]); err != nil {
 		return err
 	}
 	if err := validateServeAddr(*addr); err != nil {
+		return err
+	}
+	clock, err := parseServeNow(*nowFlag)
+	if err != nil {
 		return err
 	}
 	token, err := newServeToken()
@@ -157,6 +163,11 @@ func cmdServe(ctx context.Context, cfg config.Config, cfgPath, teamPath string,
 		persist:         *persist,
 		signups:         signups,
 		wildcardEnabled: cfg.WildcardEnabled,
+		clock:           clock,
+	}
+	if clock != nil {
+		fmt.Fprintf(os.Stderr, "%s\n", dim("The clock is pinned to "+*nowFlag+
+			" (-now): deadlines, the open gameweeks and override staleness are judged as of then."))
 	}
 
 	if s.wildcardEnabled {
@@ -791,6 +802,22 @@ func newServeToken() (string, error) {
 // a random per-startup token was never meant to carry a perimeter alone. A
 // non-loopback bind is always a decision, so refusing it early is the cheap
 // half of the threat model.
+// parseServeNow turns serve's -now value into the server's clock. Empty means the
+// wall clock (a nil clock; see squadServer.now). A frozen capture needs the pin:
+// its bootstrap never advances, so judged against the wall clock every gameweek
+// in the planning horizon eventually reads as past its deadline and the page has
+// no gameweek left to plan.
+func parseServeNow(v string) (func() time.Time, error) {
+	if v == "" {
+		return nil, nil
+	}
+	at, err := time.Parse(time.RFC3339, v)
+	if err != nil {
+		return nil, fmt.Errorf("serve -now must be an RFC3339 instant, got %q: %w", v, err)
+	}
+	return func() time.Time { return at }, nil
+}
+
 func validateServeAddr(addr string) error {
 	host, _, err := net.SplitHostPort(addr)
 	if err != nil {

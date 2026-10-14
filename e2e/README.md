@@ -71,20 +71,23 @@ buys determinism at the cost of three areas nothing here can reach:
 - **Any past-gameweek result.** `GET /api/results` needs a closed gameweek; under an unimported
   session at GW1 none exists yet. `gameweek-rail.spec.js` notes this at its own call site.
 
-## The wall clock drifts, the capture does not
+## The server's clock is pinned to the capture
 
-The capture's own deadline is already in the past relative to whenever this suite runs — it is
-not re-captured on a schedule. Two consequences, both load-bearing:
+`scripts/serve-fixture.mjs` starts the server with `-now` set to the capture manifest's
+`captured_at`, so deadlines, the open planning horizon and override staleness are all judged as of
+the moment the capture was taken — GW1 current, before its deadline — not as of today.
+
+Without the pin the suite has a fuse on it. `buildGameweeks` (`internal/viewmodel/build.go`)
+drops a gameweek whose deadline has passed for an unimported reader, the capture's bootstrap
+never advances, and so on the real calendar the open horizon shrinks a week at a time until every
+gameweek in it is past its deadline and `state.gameweeks` is empty. The page then boots with
+nothing to plan and almost every spec fails. `smoke-boot.spec.js`'s determinism control asserts
+the pin directly (the server's `now` is `captured_at`, the current gameweek is the manifest's
+`event`), so losing it fails there by name.
 
 - **No spec may assert a time-derived TEXT value** (a countdown string, a formatted date) — only
   presence/non-emptiness. `smoke-boot.spec.js` and `gameweek-rail.spec.js` both do this
   deliberately; see their own comments.
-- **Which gameweek is "current" is a function of the real calendar, not the capture.**
-  `buildGameweeks` (`internal/viewmodel/build.go`) computes the open planning horizon from the
-  server's wall clock, so `state.gameweeks` names whichever gameweeks have not yet had their
-  deadline pass TODAY — not gameweek 1. `smoke-boot.spec.js`'s determinism control checks
-  something the capture actually fixes (the club list) rather than the gameweek number for
-  exactly this reason.
 
 ## The `#optimise` button
 

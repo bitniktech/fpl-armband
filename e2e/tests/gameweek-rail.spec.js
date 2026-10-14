@@ -1,12 +1,12 @@
 // The gameweek rail (#gwrail) — one tab per planning gameweek, walked forward and back.
 //
-// ⚠️ Under the GW1 capture, on today's real calendar, GW1 and GW2 have already passed their
-// deadlines and this session has imported nothing — buildGameweeks (internal/viewmodel/build.go)
+// The server's clock is pinned to the capture moment (serve-fixture.mjs), before GW1's
+// deadline, and this session has imported nothing — buildGameweeks (internal/viewmodel/build.go)
 // drops a closed gameweek entirely unless the reader has imported real picks, so the rail
-// shows only the OPEN planning horizon (2 tabs as of this writing), never a past/closed tab.
-// That is exactly the "past-gameweek tabs are unreachable under this fixture" gap the design
-// this suite implements calls out (§6) — read the count from /api/state rather than hardcoding
-// it, so this spec keeps working as the real calendar moves the open horizon forward.
+// shows only the OPEN planning horizon, never a past/closed tab. That is exactly the
+// "past-gameweek tabs are unreachable under this fixture" gap the design this suite implements
+// calls out (§6). The count is read from /api/state rather than hardcoded, so the spec does
+// not depend on the horizon's length.
 //
 // ⚠️ Also found by reading app.js rather than assumed: selectPlanningGameweek() (the rail's
 // click handler for anything not closed) is PURELY client-side — it re-slices the gameweek

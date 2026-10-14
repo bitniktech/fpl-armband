@@ -50,21 +50,13 @@ test('GET /api/state genuinely comes from the frozen capture (determinism contro
   page,
   request,
 }) => {
-  // ⚠️ DEVIATION from the design this suite implements. The original plan compared
-  // /api/state's "current" planning gameweek and deadline against the manifest's captured
-  // event/event_deadline. That does not hold: buildGameweeks (internal/viewmodel/build.go)
-  // computes "current" from the LIVE server clock at request time, not from the captured
-  // moment — so which gameweek reads `current: true` drifts forward with the real calendar
-  // even though the underlying bootstrap is frozen. Measured directly: against this LIVE_CAPTURE
-  // (GW1, deadline 2026-08-21), a run today returns gameweeks 3-4 as the open planning
-  // horizon, not gameweek 1 — GW1's deadline has already passed and the entry is unimported,
-  // so buildGameweeks drops it entirely. Comparing gameweek numbers is therefore a comparison
-  // against the CALENDAR, not the capture, and would need updating every week regardless of
-  // whether priming ever regressed.
-  //
-  // What genuinely proves this response came from the committed capture and not a live fetch
-  // is something the capture fixes and the calendar cannot move: which clubs exist. Decoded
-  // directly from the same bootstrap-static.json.gz this suite primed the cache from.
+  // Two things prove this response came from the committed capture rather than a live
+  // fetch. First, which clubs exist: decoded directly from the same bootstrap-static.json.gz
+  // this suite primed the cache from. Second, the clock: serve-fixture.mjs pins the server
+  // to the manifest's captured_at, so the open planning horizon starts at the manifest's own
+  // event. Without that pin the server judges deadlines by the wall clock, and once every
+  // gameweek in the horizon has passed its deadline the page boots with no gameweek at all —
+  // this assertion names that failure instead of leaving it to surface as a page error.
   await page.goto('/');
   const res = await request.get('/api/state');
   expect(res.status()).toBe(200);
@@ -77,6 +69,13 @@ test('GET /api/state genuinely comes from the frozen capture (determinism contro
 
   expect(Array.isArray(state.clubs), 'state.clubs must be an array of club codes').toBe(true);
   expect([...state.clubs].sort()).toEqual(expectedClubs);
+
+  const manifest = JSON.parse(readFileSync(path.join(captureDir, 'manifest.json'), 'utf8'));
+  expect(state.now, 'the server clock is pinned to the capture moment')
+    .toBe(manifest.captured_at);
+  const current = (state.gameweeks || []).find((g) => g.current);
+  expect(current && current.gw, 'the current gameweek is the capture\'s own event')
+    .toBe(manifest.event);
 });
 
 test('the import card is hidden at GW1', async ({ page }) => {

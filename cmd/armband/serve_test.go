@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"armband/internal/analysis"
 	"armband/internal/config"
@@ -35,6 +36,39 @@ func TestServeRefusesANonLoopbackAddr(t *testing.T) {
 			t.Errorf("non-loopback %q was accepted; it would expose the config write "+
 				"path to the network", bad)
 		}
+	}
+}
+
+// TestServeNowPinsTheClockOrRefuses covers serve's -now: unset leaves the wall
+// clock in charge, a malformed value is refused rather than silently ignored
+// (an ignored pin is a frozen capture judged against today's date again), and a
+// valid one fixes every reading of the clock to that instant.
+func TestServeNowPinsTheClockOrRefuses(t *testing.T) {
+	if clock, err := parseServeNow(""); err != nil || clock != nil {
+		t.Fatalf("unset -now must mean the wall clock (nil clock, no error), got clock=%v err=%v",
+			clock != nil, err)
+	}
+	for _, bad := range []string{"2026-08-19", "yesterday", "2026-08-19 13:48:20"} {
+		if _, err := parseServeNow(bad); err == nil {
+			t.Errorf("-now %q was accepted; it is not an RFC3339 instant", bad)
+		}
+	}
+	const at = "2026-08-19T13:48:20.956272817Z"
+	clock, err := parseServeNow(at)
+	if err != nil {
+		t.Fatalf("-now %q refused: %v", at, err)
+	}
+	if clock == nil {
+		t.Fatalf("-now %q left the wall clock in charge", at)
+	}
+	s := &squadServer{clock: clock}
+	first := s.now()
+	if got := first.Format(time.RFC3339Nano); got != at {
+		t.Errorf("the server reads %s, want the pinned %s", got, at)
+	}
+	time.Sleep(2 * time.Millisecond)
+	if !s.now().Equal(first) {
+		t.Errorf("the pinned clock moved: %s then %s", first, s.now())
 	}
 }
 

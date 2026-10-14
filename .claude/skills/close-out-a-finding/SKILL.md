@@ -6,7 +6,7 @@ description: Turn a completed measurement into a vault finding that will survive
 # Closing out a finding
 
 **Record the VERDICT, not the title.** A title alone does not stop an idea being rebuilt — that is
-the failure this store exists to prevent. Use `templates/finding.md`.
+the failure this store exists to prevent. Use the vault's finding template.
 
 Every check below is here because it caught a real error in a real note. Work the list; it is
 faster than the review round-trip.

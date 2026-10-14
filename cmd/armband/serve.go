@@ -165,10 +165,7 @@ func cmdServe(ctx context.Context, cfg config.Config, cfgPath, teamPath string,
 		wildcardEnabled: cfg.WildcardEnabled,
 		clock:           clock,
 	}
-	if clock != nil {
-		fmt.Fprintf(os.Stderr, "%s\n", dim("The clock is pinned to "+*nowFlag+
-			" (-now): deadlines, the open gameweeks and override staleness are judged as of then."))
-	}
+	announcePinnedClock(*nowFlag)
 
 	if s.wildcardEnabled {
 		fmt.Fprintf(os.Stderr, "%s\n", dim("/wildcard is enabled (config.json wildcard_enabled)."))
@@ -794,14 +791,6 @@ func newServeToken() (string, error) {
 	return hex.EncodeToString(b), nil
 }
 
-// validateServeAddr accepts only loopback listeners.
-//
-// The served page can write config.json, so the listener is the outer
-// perimeter of that write path. Bound to anything but loopback, the token is
-// the only gate between a mutation and every host that can reach the port, and
-// a random per-startup token was never meant to carry a perimeter alone. A
-// non-loopback bind is always a decision, so refusing it early is the cheap
-// half of the threat model.
 // parseServeNow turns serve's -now value into the server's clock. Empty means the
 // wall clock (a nil clock; see squadServer.now). A frozen capture needs the pin:
 // its bootstrap never advances, so judged against the wall clock every gameweek
@@ -818,6 +807,23 @@ func parseServeNow(v string) (func() time.Time, error) {
 	return func() time.Time { return at }, nil
 }
 
+// announcePinnedClock tells the operator when -now has replaced the wall clock.
+func announcePinnedClock(at string) {
+	if at == "" {
+		return
+	}
+	fmt.Fprintf(os.Stderr, "%s\n", dim("The clock is pinned to "+at+
+		" (-now): deadlines, the open gameweeks and override staleness are judged as of then."))
+}
+
+// validateServeAddr accepts only loopback listeners.
+//
+// The served page can write config.json, so the listener is the outer
+// perimeter of that write path. Bound to anything but loopback, the token is
+// the only gate between a mutation and every host that can reach the port, and
+// a random per-startup token was never meant to carry a perimeter alone. A
+// non-loopback bind is always a decision, so refusing it early is the cheap
+// half of the threat model.
 func validateServeAddr(addr string) error {
 	host, _, err := net.SplitHostPort(addr)
 	if err != nil {

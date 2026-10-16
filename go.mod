@@ -3,10 +3,10 @@ module armband
 go 1.26.7
 
 require (
-	github.com/anthropics/anthropic-sdk-go v1.68.0
-	github.com/jackc/pgx/v5 v5.10.0
-	github.com/prometheus/client_golang v1.24.1
-	golang.org/x/sync v0.22.0
+	github.com/anthropics/anthropic-sdk-go v1.80.0
+	github.com/jackc/pgx/v5 v5.11.0
+	github.com/prometheus/client_golang v1.25.0
+	golang.org/x/sync v0.23.0
 )
 
 require (
@@ -20,16 +20,16 @@ require (
 	github.com/jackc/puddle/v2 v2.2.2 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/pb33f/ordered-map/v2 v2.3.1 // indirect
-	github.com/prometheus/client_model v0.6.2 // indirect
-	github.com/prometheus/common v0.70.1 // indirect
-	github.com/prometheus/procfs v0.21.1 // indirect
+	github.com/prometheus/client_model v0.6.3 // indirect
+	github.com/prometheus/common v0.72.0 // indirect
+	github.com/prometheus/procfs v0.22.0 // indirect
 	github.com/standard-webhooks/standard-webhooks/libraries v0.0.1 // indirect
 	github.com/tidwall/gjson v1.18.0 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
 	github.com/tidwall/sjson v1.2.5 // indirect
 	go.yaml.in/yaml/v4 v4.0.0-rc.2 // indirect
-	golang.org/x/sys v0.47.0 // indirect
-	golang.org/x/text v0.40.0 // indirect
-	google.golang.org/protobuf v1.36.11 // indirect
+	golang.org/x/sys v0.48.0 // indirect
+	golang.org/x/text v0.42.0 // indirect
+	google.golang.org/protobuf v1.36.12 // indirect
 )
